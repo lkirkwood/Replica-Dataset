@@ -6,9 +6,9 @@
 #include "GLCheck.h"
 #include "MirrorRenderer.h"
 
-
-int main(int argc, char* argv[]) {
-  ASSERT(argc == 3 || argc == 4, "Usage: ./ReplicaRenderer mesh.ply /path/to/atlases [mirrorFile]");
+int main(int argc, char *argv[]) {
+  ASSERT(argc == 3 || argc == 4,
+         "Usage: ./ReplicaRenderer mesh.ply /path/to/atlases [mirrorFile]");
 
   const std::string meshFile(argv[1]);
   const std::string atlasFolder(argv[2]);
@@ -30,12 +30,12 @@ int main(int argc, char* argv[]) {
   EGLCtx egl;
 
   egl.PrintInformation();
-  
-  if(!checkGLVersion()) {
+
+  if (!checkGLVersion()) {
     return 1;
   }
 
-  //Don't draw backfaces
+  // Don't draw backfaces
   const GLenum frontFace = GL_CCW;
   glFrontFace(frontFace);
 
@@ -44,21 +44,16 @@ int main(int argc, char* argv[]) {
   pangolin::GlRenderBuffer renderBuffer(width, height);
   pangolin::GlFramebuffer frameBuffer(render, renderBuffer);
 
-  pangolin::GlTexture depthTexture(width, height, GL_R32F, false, 0, GL_RED, GL_FLOAT, 0);
+  pangolin::GlTexture depthTexture(width, height, GL_R32F, false, 0, GL_RED,
+                                   GL_FLOAT, 0);
   pangolin::GlFramebuffer depthFrameBuffer(depthTexture, renderBuffer);
 
   // Setup a camera
   pangolin::OpenGlRenderState s_cam(
       pangolin::ProjectionMatrixRDF_BottomLeft(
-          width,
-          height,
-          width / 2.0f,
-          width / 2.0f,
-          (width - 1.0f) / 2.0f,
-          (height - 1.0f) / 2.0f,
-          0.1f,
-          100.0f),
-      pangolin::ModelViewLookAtRDF(0, 0, 4, 0, 0, 0, 0, 1, 0));
+          width, height, width / 2.0f, width / 2.0f, (width - 1.0f) / 2.0f,
+          (height - 1.0f) / 2.0f, 0.1f, 100.0f),
+      pangolin::ModelViewLookAtRDF(4, 0, -1, 4, 1, -1, 0, 0, 1));
 
   // Start at some origin
   Eigen::Matrix4d T_camera_world = s_cam.GetModelViewMatrix();
@@ -66,7 +61,7 @@ int main(int argc, char* argv[]) {
   // And move to the left
   Eigen::Matrix4d T_new_old = Eigen::Matrix4d::Identity();
 
-  T_new_old.topRightCorner(3, 1) = Eigen::Vector3d(0.025, 0, 0);
+  T_new_old.topRightCorner(3, 1) = Eigen::Vector3d(-0.025, 0, 0);
 
   // load mirrors
   std::vector<MirrorSurface> mirrors;
@@ -92,7 +87,7 @@ int main(int argc, char* argv[]) {
   pangolin::ManagedImage<uint16_t> depthImageInt(width, height);
 
   // Render some frames
-  const size_t numFrames = 100;
+  const size_t numFrames = 120;
   for (size_t i = 0; i < numFrames; i++) {
     std::cout << "\rRendering frame " << i + 1 << "/" << numFrames << "... ";
     std::cout.flush();
@@ -109,11 +104,11 @@ int main(int argc, char* argv[]) {
 
     glDisable(GL_CULL_FACE);
 
-    glPopAttrib(); //GL_VIEWPORT_BIT
+    glPopAttrib(); // GL_VIEWPORT_BIT
     frameBuffer.Unbind();
 
     for (size_t i = 0; i < mirrors.size(); i++) {
-      MirrorSurface& mirror = mirrors[i];
+      MirrorSurface &mirror = mirrors[i];
       // capture reflections
       mirrorRenderer.CaptureReflection(mirror, ptexMesh, s_cam, frontFace);
 
@@ -124,7 +119,7 @@ int main(int argc, char* argv[]) {
       // render mirror
       mirrorRenderer.Render(mirror, mirrorRenderer.GetMaskTexture(i), s_cam);
 
-      glPopAttrib(); //GL_VIEWPORT_BIT
+      glPopAttrib(); // GL_VIEWPORT_BIT
       frameBuffer.Unbind();
     }
 
@@ -134,10 +129,9 @@ int main(int argc, char* argv[]) {
     char filename[1000];
     snprintf(filename, 1000, "frame%06zu.jpg", i);
 
-    pangolin::SaveImage(
-        image.UnsafeReinterpret<uint8_t>(),
-        pangolin::PixelFormatFromString("RGB24"),
-        std::string(filename));
+    pangolin::SaveImage(image.UnsafeReinterpret<uint8_t>(),
+                        pangolin::PixelFormatFromString("RGB24"),
+                        std::string(filename));
 
     if (renderDepth) {
       // render depth
@@ -152,20 +146,19 @@ int main(int argc, char* argv[]) {
 
       glDisable(GL_CULL_FACE);
 
-      glPopAttrib(); //GL_VIEWPORT_BIT
+      glPopAttrib(); // GL_VIEWPORT_BIT
       depthFrameBuffer.Unbind();
 
       depthTexture.Download(depthImage.ptr, GL_RED, GL_FLOAT);
 
       // convert to 16-bit int
-      for(size_t i = 0; i < depthImage.Area(); i++)
-          depthImageInt[i] = static_cast<uint16_t>(depthImage[i] + 0.5f);
+      for (size_t i = 0; i < depthImage.Area(); i++)
+        depthImageInt[i] = static_cast<uint16_t>(depthImage[i] + 0.5f);
 
       snprintf(filename, 1000, "depth%06zu.png", i);
-      pangolin::SaveImage(
-          depthImageInt.UnsafeReinterpret<uint8_t>(),
-          pangolin::PixelFormatFromString("GRAY16LE"),
-          std::string(filename), true, 34.0f);
+      pangolin::SaveImage(depthImageInt.UnsafeReinterpret<uint8_t>(),
+                          pangolin::PixelFormatFromString("GRAY16LE"),
+                          std::string(filename), true, 34.0f);
     }
 
     // Move the camera
@@ -173,8 +166,8 @@ int main(int argc, char* argv[]) {
 
     s_cam.GetModelViewMatrix() = T_camera_world;
   }
-  std::cout << "\rRendering frame " << numFrames << "/" << numFrames << "... done" << std::endl;
+  std::cout << "\rRendering frame " << numFrames << "/" << numFrames
+            << "... done" << std::endl;
 
   return 0;
 }
-
